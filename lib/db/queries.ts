@@ -40,14 +40,20 @@ export async function listEnabledSources(): Promise<SourceRow[]> {
 export async function insertItems(
   source_id: string,
   candidates: ItemCandidate[],
+  scores: number[],
 ): Promise<number> {
   if (candidates.length === 0) return 0;
+  if (scores.length !== candidates.length) {
+    throw new Error("scores length must match candidates length");
+  }
   let inserted = 0;
-  for (const c of candidates) {
+  for (let i = 0; i < candidates.length; i++) {
+    const c = candidates[i];
+    const score = scores[i];
     const res = await sql`
-      insert into items (source_id, external_id, title, url, summary, content, published_at)
+      insert into items (source_id, external_id, title, url, summary, content, published_at, breaking_score)
       values (${source_id}, ${c.external_id}, ${c.title}, ${c.url},
-              ${c.summary}, ${c.content}, ${c.published_at})
+              ${c.summary}, ${c.content}, ${c.published_at}, ${score})
       on conflict (source_id, external_id) do nothing
       returning id
     `;
