@@ -2,6 +2,7 @@
 import { useState, useTransition } from "react";
 import { Button } from "@/components/ui/button";
 import { refreshAll } from "./actions";
+import { AddSourceDialog } from "@/components/sources/AddSourceDialog";
 import type { RefreshSummary } from "@/lib/research/types";
 
 export function SourcesToolbar() {
@@ -9,6 +10,7 @@ export function SourcesToolbar() {
   const [summary, setSummary] = useState<RefreshSummary | null>(null);
   return (
     <div className="flex items-center gap-3">
+      <AddSourceDialog />
       <Button
         disabled={pending}
         onClick={() => {

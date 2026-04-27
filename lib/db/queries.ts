@@ -148,3 +148,23 @@ export async function setItemStatus(id: string, status: ItemStatus) {
 export async function setItemNotes(id: string, notes: string) {
   await sql`update items set notes = ${notes} where id = ${id}::uuid`;
 }
+
+export async function addSource(kind: SourceKind, url: string, name: string) {
+  const rows = await sql`
+    insert into sources (kind, url, name) values (${kind}, ${url}, ${name})
+    returning id
+  `;
+  return rows[0].id as string;
+}
+
+export async function deleteSource(id: string) {
+  await sql`delete from sources where id = ${id}::uuid`;
+}
+
+export async function setSourceEnabled(id: string, enabled: boolean) {
+  await sql`update sources set enabled = ${enabled} where id = ${id}::uuid`;
+}
+
+export async function renameSource(id: string, name: string) {
+  await sql`update sources set name = ${name} where id = ${id}::uuid`;
+}
