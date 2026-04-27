@@ -24,7 +24,7 @@ export function SourcesToolbar() {
       </Button>
       {summary && (
         <span className="font-mono text-[11px] text-[color:var(--color-ink)]/70">
-          fetched {summary.total_fetched} · new {summary.new_items} · errors {summary.errors.length}
+          fetched {summary.total_fetched} · new {summary.new_items} · purged {summary.purged_count} · errors {summary.errors.length}
         </span>
       )}
     </div>

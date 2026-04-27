@@ -155,6 +155,18 @@ export async function setItemNotes(id: string, notes: string) {
   await sql`update items set notes = ${notes} where id = ${id}::uuid`;
 }
 
+// Drop items older than the rolling window. Uses published_at when present
+// (so a feed's stated date wins) and falls back to fetched_at otherwise.
+// Returns the number of rows deleted.
+export async function purgeOldItems(): Promise<number> {
+  const result = await sql`
+    delete from items
+    where coalesce(published_at, fetched_at) < now() - interval '3 days'
+    returning id
+  `;
+  return result.length;
+}
+
 export async function addSource(kind: SourceKind, url: string, name: string) {
   const rows = await sql`
     insert into sources (kind, url, name) values (${kind}, ${url}, ${name})

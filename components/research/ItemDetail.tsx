@@ -41,7 +41,7 @@ export function ItemDetailView({
   }
 
   return (
-    <article className="flex h-full flex-col gap-4">
+    <article className="flex flex-col gap-4 pb-12">
       <header className="flex flex-col gap-2">
         <div className="flex items-center gap-2">
           {item.breaking_score >= 1 && <BreakingBadge />}
@@ -51,10 +51,26 @@ export function ItemDetailView({
           </span>
         </div>
         <h1 className="font-display text-[40px] uppercase leading-tight">
-          <a href={item.url} target="_blank" rel="noreferrer" className="hover:underline">
-            {item.title}
+          <a
+            href={item.url}
+            target="_blank"
+            rel="noreferrer"
+            className="underline decoration-[color:var(--color-rule-paper)] underline-offset-4 hover:decoration-[color:var(--color-signal)]"
+          >
+            {item.title} <span className="font-mono text-[14px]">↗</span>
           </a>
         </h1>
+        <div className="font-mono text-[10px] uppercase tracking-mono text-[color:var(--color-warm-dim)]">
+          <a
+            href={item.url}
+            target="_blank"
+            rel="noreferrer"
+            className="hover:text-[color:var(--color-signal)]"
+            title="Open original in new tab"
+          >
+            {item.url}
+          </a>
+        </div>
         <div className="font-mono text-[10px] uppercase tracking-mono text-[color:var(--color-warm-dim)]">
           {item.published_at ? new Date(item.published_at).toLocaleString() : "no pub date"}
           {" · fetched "}

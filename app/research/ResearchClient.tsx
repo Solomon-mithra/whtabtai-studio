@@ -64,17 +64,17 @@ export function ResearchClient({ initialItems }: { initialItems: ItemListRow[] }
   }
 
   return (
-    <div className="grid h-full grid-cols-[360px_1fr]">
-      <aside className="flex h-full flex-col border-r border-[color:var(--color-rule-paper)]">
+    <div className="flex h-full overflow-hidden">
+      <aside className="flex h-full w-[360px] flex-shrink-0 flex-col border-r border-[color:var(--color-rule-paper)]">
         <div className="flex flex-col gap-3 border-b border-[color:var(--color-rule-paper)] px-4 py-3">
           <FilterChips value={filter} onChange={setFilter} />
           <SortMenu value={sort} onChange={setSort} />
         </div>
-        <div className="flex-1 overflow-auto">
+        <div className="min-h-0 flex-1 overflow-y-auto">
           <ItemList items={items} selectedId={selectedId} onSelect={setSelectedId} />
         </div>
       </aside>
-      <main className="overflow-auto px-8 py-6">
+      <main className="h-full min-w-0 flex-1 overflow-y-auto px-8 py-6">
         {detail ? (
           <ItemDetailView
             item={detail}

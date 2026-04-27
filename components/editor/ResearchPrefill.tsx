@@ -7,11 +7,13 @@ export function ResearchPrefill({
   itemId,
   title,
   notes,
+  summary,
   sourceName,
 }: {
   itemId: string;
   title: string;
   notes: string;
+  summary: string | null;
   sourceName: string;
 }) {
   const { hydrated, setField, addSlideAfter } = useStudio();
@@ -23,10 +25,13 @@ export function ResearchPrefill({
     // Don't clobber the user's current draft — push a new slide and prefill that.
     addSlideAfter();
     setField("headline", title.slice(0, 120));
-    if (notes) setField("subtext", notes);
+    // Notes is the user's own take; prefer it. If empty, seed subtext from
+    // the article summary so they have a starting draft instead of a blank.
+    const subtextSeed = notes || (summary ? summary.slice(0, 280) : "");
+    if (subtextSeed) setField("subtext", subtextSeed);
     setField("source", sourceName);
     void markPosted(itemId);
-  }, [hydrated, itemId, title, notes, sourceName, setField, addSlideAfter]);
+  }, [hydrated, itemId, title, notes, summary, sourceName, setField, addSlideAfter]);
 
   return null;
 }

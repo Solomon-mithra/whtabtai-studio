@@ -18,6 +18,7 @@ export type RefreshSummary = {
   new_items: number;
   breaking_count: number;
   trending_count: number;
+  purged_count: number;
   errors: AdapterError[];
 };
 
