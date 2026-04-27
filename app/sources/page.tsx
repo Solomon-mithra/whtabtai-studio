@@ -1,5 +1,6 @@
 import { listSources } from "@/lib/db/queries";
 import { SourceRow } from "@/components/sources/SourceRow";
+import { SourcesToolbar } from "./SourcesClient";
 
 export default async function SourcesPage() {
   const sources = await listSources();
@@ -9,6 +10,7 @@ export default async function SourcesPage() {
         <h1 className="font-display text-[40px] uppercase tracking-tight text-[color:var(--color-ink)]">
           Sources
         </h1>
+        <SourcesToolbar />
       </header>
       <div className="rounded-md border border-[color:var(--color-rule-paper)]">
         <table className="w-full text-left text-sm">
