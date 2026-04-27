@@ -120,3 +120,31 @@ export async function listItems(
   const rows = await sql.query(text, params);
   return rows as ItemListRow[];
 }
+
+export type ItemDetail = ItemListRow & {
+  content: string | null;
+  notes: string;
+  source_url: string;
+};
+
+export async function getItemDetail(id: string): Promise<ItemDetail | null> {
+  const rows = await sql`
+    select i.id, i.source_id, s.name as source_name, s.kind as source_kind,
+      i.title, i.url, i.summary, i.content, i.published_at, i.fetched_at,
+      i.status, i.notes, i.breaking_score,
+      exists (select 1 from clusters c where i.id = any(c.item_ids)) as is_trending,
+      s.url as source_url
+    from items i
+    join sources s on s.id = i.source_id
+    where i.id = ${id}::uuid
+  `;
+  return (rows[0] as ItemDetail) ?? null;
+}
+
+export async function setItemStatus(id: string, status: ItemStatus) {
+  await sql`update items set status = ${status} where id = ${id}::uuid`;
+}
+
+export async function setItemNotes(id: string, notes: string) {
+  await sql`update items set notes = ${notes} where id = ${id}::uuid`;
+}

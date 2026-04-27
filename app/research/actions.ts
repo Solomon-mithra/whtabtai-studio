@@ -1,6 +1,28 @@
 "use server";
-import { listItems, type ItemFilter, type ItemSort } from "@/lib/db/queries";
+import { revalidatePath } from "next/cache";
+import {
+  getItemDetail,
+  listItems,
+  setItemNotes,
+  setItemStatus,
+  type ItemFilter,
+  type ItemSort,
+  type ItemStatus,
+} from "@/lib/db/queries";
 
 export async function fetchItems(filter: ItemFilter, sort: ItemSort) {
   return listItems(filter, sort, null);
+}
+
+export async function fetchItemDetail(id: string) {
+  return getItemDetail(id);
+}
+
+export async function updateStatus(id: string, status: ItemStatus) {
+  await setItemStatus(id, status);
+  revalidatePath("/research");
+}
+
+export async function updateNotes(id: string, notes: string) {
+  await setItemNotes(id, notes);
 }
