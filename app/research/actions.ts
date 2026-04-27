@@ -26,3 +26,8 @@ export async function updateStatus(id: string, status: ItemStatus) {
 export async function updateNotes(id: string, notes: string) {
   await setItemNotes(id, notes);
 }
+
+export async function markPosted(id: string) {
+  await setItemStatus(id, "posted");
+  revalidatePath("/research");
+}

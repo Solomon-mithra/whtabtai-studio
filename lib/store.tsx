@@ -159,6 +159,8 @@ type StudioContextValue = StudioState & {
   duplicateSlide: (id?: string) => void;
   deleteSlide: (id: string) => void;
   reorderSlides: (fromIndex: number, toIndex: number) => void;
+
+  hydrated: boolean;
 };
 
 const StudioContext = createContext<StudioContextValue | null>(null);
@@ -500,6 +502,8 @@ export function StudioProvider({ children }: { children: ReactNode }) {
       duplicateSlide,
       deleteSlide,
       reorderSlides,
+
+      hydrated,
     };
   }, [
     current,
@@ -520,6 +524,7 @@ export function StudioProvider({ children }: { children: ReactNode }) {
     duplicateSlide,
     deleteSlide,
     reorderSlides,
+    hydrated,
   ]);
 
   return (
@@ -591,6 +596,8 @@ export function StudioSlideOverride({
       duplicateSlide: noop,
       deleteSlide: noop,
       reorderSlides: noop,
+
+      hydrated: true,
     };
   }, [slide, size, fontSystem]);
   return (
