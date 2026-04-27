@@ -83,6 +83,16 @@ Indexes: `(status, fetched_at desc)`, `(breaking_score desc) where breaking_scor
 
 Clusters are recomputed at the end of every Refresh run (cheap because all data is in-process at that point). Old clusters whose `window_start` is older than 7 days may be garbage-collected on each Refresh.
 
+### `settings`
+
+Single-row table for user preferences. Inserted with defaults on first migration; updated in-place by the Settings UI.
+
+| column | type | notes |
+|---|---|---|
+| `id` | int PK | hardcoded to 1 — `check (id = 1)` enforces single-row |
+| `auto_refresh_on_sources_open` | boolean | default false |
+| `updated_at` | timestamptz | default now() |
+
 ## Source ingestion
 
 Each `kind` has an adapter that, given a `source` row, returns a list of normalized item candidates. The Refresh action calls every enabled source's adapter, dedups against existing `(source_id, external_id)` pairs, inserts new items with `status='new'`, then runs the smart layer over the newly inserted items plus any items inside the trending window.
@@ -119,7 +129,7 @@ For each newly fetched item, compute `breaking_score: 0..3` by counting matches 
 - `\bbreaking\b`, `\bbreak(ing)? change\b`
 - `\bdeprecat`
 - `\bremoved\b`, `\bremoval\b`
-- `\bsemver\b` major bump (e.g. `v(\d+)\.0\.0` where it follows a previous `v(\d-1).x.y`)
+- semver major bump — e.g. `v(\d+)\.0\.0` where it strictly follows a previous `v(\d-1).x.y` from the same source. **This rule applies to `github_releases` only** (the adapter has the prior release's tag in its fetched list); it is skipped for all other kinds.
 - "price", "pricing", "cost" *only* when source kind is `rss` and source name contains a known lab (Anthropic / OpenAI / etc.) — heuristic to catch pricing changes from labs without spamming the radar from generic blogs.
 
 Score is the count of distinct rules matched, capped at 3. Items with `breaking_score >= 1` get a "BREAKING" badge in the UI.
@@ -138,7 +148,7 @@ Replaces the current `ComingSoon` stub.
 
 - Page header with "Refresh all" primary button. While refreshing, button shows spinner + per-source progress count ("4 / 15 done").
 - After refresh, an alert summarizes: total new items, count of breaking, count of trending, any source errors.
-- Table columns: name, kind, url, enabled toggle, last fetched (relative time), item count (lifetime).
+- Table columns: name, kind, url, enabled toggle, last fetched (relative time), item count (lifetime — computed live as `count(items) where items.source_id = sources.id`; no denormalized counter).
 - "Add source" → modal: kind selector (`rss` / `github_releases` / `hn` / `arxiv` / `reddit`), name field, url field. Validates URL format per kind on submit.
 - Per-row delete (with confirm) and inline rename.
 
@@ -147,7 +157,7 @@ Replaces the current `ComingSoon` stub.
 Replaces the current `ComingSoon` stub.
 
 - Two-pane layout: left = item list (resizable, default ~360px), right = item detail.
-- Top filter row: status filter chips (`All` / `New` / `Saved` / `Trending` / `Breaking`) and source dropdown.
+- Top filter row: status filter chips (`All` / `New` / `Saved` / `Trending` / `Breaking`) and source dropdown. The `Trending` chip filters by membership in any active `clusters.item_ids`; this requires the read query to join (or `EXISTS`-check) against `clusters`. The `Breaking` chip filters by `items.breaking_score >= 1`.
 - Sort menu: `Newest` (default) / `Trending first` / `Breaking first`.
 - List item shows: title, source name, relative time, BREAKING / TRENDING badges if applicable, status indicator.
 - Detail pane shows:
@@ -212,7 +222,7 @@ None. All design decisions are locked.
 
 - v1 ships when:
   - User can click "Refresh all" and see new items appear from all five adapter kinds.
-  - User can star/skip an item and have it persist across refreshes.
+  - User can save/skip an item and have it persist across refreshes.
   - User can write notes on an item and they autosave.
   - User can click "Send to Studio" and land in Studio with a prefilled draft.
   - Breaking and Trending badges appear on items that match their respective rules.
