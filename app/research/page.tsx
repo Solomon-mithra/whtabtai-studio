@@ -1,10 +1,7 @@
-import { ComingSoon } from "@/components/shell/ComingSoon";
+import { listItems } from "@/lib/db/queries";
+import { ResearchClient } from "./ResearchClient";
 
-export default function ResearchPage() {
-  return (
-    <ComingSoon
-      name="Research"
-      blurb="A workspace for digging into AI announcements before they become posts. Notes, threads, half-formed takes."
-    />
-  );
+export default async function ResearchPage() {
+  const initial = await listItems("all", "newest", null);
+  return <ResearchClient initialItems={initial} />;
 }

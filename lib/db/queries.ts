@@ -59,3 +59,64 @@ export async function insertItems(
 export async function markSourceFetched(source_id: string): Promise<void> {
   await sql`update sources set last_fetched_at = now() where id = ${source_id}`;
 }
+
+export type ItemStatus = "new" | "saved" | "skipped" | "posted";
+
+export type ItemListRow = {
+  id: string;
+  source_id: string;
+  source_name: string;
+  source_kind: SourceKind;
+  title: string;
+  url: string;
+  summary: string | null;
+  published_at: string | null;
+  fetched_at: string;
+  status: ItemStatus;
+  breaking_score: number;
+  is_trending: boolean;
+};
+
+export type ItemFilter = "all" | "new" | "saved" | "trending" | "breaking";
+export type ItemSort = "newest" | "trending" | "breaking";
+
+export async function listItems(
+  filter: ItemFilter,
+  sort: ItemSort,
+  source_id: string | null,
+): Promise<ItemListRow[]> {
+  const conditions: string[] = ["1=1"];
+  const params: unknown[] = [];
+
+  if (filter === "new") conditions.push(`i.status = 'new'`);
+  else if (filter === "saved") conditions.push(`i.status = 'saved'`);
+  else if (filter === "breaking") conditions.push(`i.breaking_score >= 1`);
+  else if (filter === "trending")
+    conditions.push(`exists (select 1 from clusters c where i.id = any(c.item_ids))`);
+
+  if (source_id) {
+    params.push(source_id);
+    conditions.push(`i.source_id = $${params.length}::uuid`);
+  }
+
+  const orderBy =
+    sort === "trending"
+      ? "(case when exists (select 1 from clusters c where i.id = any(c.item_ids)) then 0 else 1 end), i.fetched_at desc"
+      : sort === "breaking"
+        ? "i.breaking_score desc, i.fetched_at desc"
+        : "i.fetched_at desc";
+
+  const text = `
+    select i.id, i.source_id, s.name as source_name, s.kind as source_kind,
+      i.title, i.url, i.summary, i.published_at, i.fetched_at,
+      i.status, i.breaking_score,
+      exists (select 1 from clusters c where i.id = any(c.item_ids)) as is_trending
+    from items i
+    join sources s on s.id = i.source_id
+    where ${conditions.join(" and ")}
+    order by ${orderBy}
+    limit 200
+  `;
+  const rows = await sql.query(text, params);
+  return rows as ItemListRow[];
+}
