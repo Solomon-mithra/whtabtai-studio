@@ -13,9 +13,6 @@ type AlgoliaResponse = {
   hits: Hit[];
 };
 
-const HN_QUERY =
-  '(GPT OR Claude OR LLM OR "AI agent" OR Anthropic OR OpenAI OR transformer OR diffusion OR fine-tuning)';
-
 export function parseHn(json: AlgoliaResponse): ItemCandidate[] {
   return json.hits.map((hit) => {
     const cleanText = hit.story_text
@@ -32,8 +29,12 @@ export function parseHn(json: AlgoliaResponse): ItemCandidate[] {
   });
 }
 
+// Algolia's `tags=front_page&query=<keywords>` returns 0 hits in practice —
+// the front-page tag is an AND filter, not an OR, so it intersects with the
+// keyword query against a tiny corpus. Drop the keyword filter; the HN front
+// page is AI-heavy enough on its own for an AI-builder brand.
 export const hnAdapter: Adapter = async (_source: SourceRow) => {
-  const url = `https://hn.algolia.com/api/v1/search?tags=front_page&query=${encodeURIComponent(HN_QUERY)}`;
+  const url = "https://hn.algolia.com/api/v1/search?tags=front_page&hitsPerPage=50";
   const res = await fetch(url, {
     headers: {
       "User-Agent": "whtabtai-research/0.1 (+https://whtabtai.local)",
