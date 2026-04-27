@@ -10,8 +10,12 @@ import {
   type ItemStatus,
 } from "@/lib/db/queries";
 
-export async function fetchItems(filter: ItemFilter, sort: ItemSort) {
-  return listItems(filter, sort, null);
+export async function fetchItems(
+  filter: ItemFilter,
+  sort: ItemSort,
+  search: string | null = null,
+) {
+  return listItems(filter, sort, null, search);
 }
 
 export async function fetchItemDetail(id: string) {

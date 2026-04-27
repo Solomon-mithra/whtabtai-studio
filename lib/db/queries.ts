@@ -90,6 +90,7 @@ export async function listItems(
   filter: ItemFilter,
   sort: ItemSort,
   source_id: string | null,
+  search: string | null = null,
 ): Promise<ItemListRow[]> {
   const conditions: string[] = ["1=1"];
   const params: unknown[] = [];
@@ -103,6 +104,14 @@ export async function listItems(
   if (source_id) {
     params.push(source_id);
     conditions.push(`i.source_id = $${params.length}::uuid`);
+  }
+
+  if (search && search.trim()) {
+    // Match on title or summary, case-insensitive. Wrap the user input in
+    // %...% so we never substring-inject; the parameter is bound, not
+    // interpolated. Empty/whitespace-only search is skipped above.
+    params.push(`%${search.trim()}%`);
+    conditions.push(`(i.title ilike $${params.length} or i.summary ilike $${params.length})`);
   }
 
   const orderBy =

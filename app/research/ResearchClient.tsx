@@ -23,12 +23,20 @@ export function ResearchClient({ initialItems }: { initialItems: ItemListRow[] }
   const [items, setItems] = useState(initialItems);
   const [filter, setFilter] = useState<ItemFilter>("all");
   const [sort, setSort] = useState<ItemSort>("newest");
+  const [searchInput, setSearchInput] = useState(""); // immediate textbox value
+  const [searchQuery, setSearchQuery] = useState(""); // debounced value sent to server
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [detail, setDetail] = useState<ItemDetail | null>(null);
   const [leftWidth, setLeftWidth] = useState(LEFT_WIDTH_DEFAULT);
   const widthRef = useRef(LEFT_WIDTH_DEFAULT);
   const [, start] = useTransition();
   const router = useRouter();
+
+  // Debounce search input → query so we don't hammer the DB on every keystroke.
+  useEffect(() => {
+    const t = setTimeout(() => setSearchQuery(searchInput.trim()), 300);
+    return () => clearTimeout(t);
+  }, [searchInput]);
 
   // Hydrate the saved width once on mount.
   useEffect(() => {
@@ -65,19 +73,20 @@ export function ResearchClient({ initialItems }: { initialItems: ItemListRow[] }
     window.addEventListener("mouseup", onUp);
   }
 
-  // Refetch the list when filter/sort change. Guard against out-of-order
-  // responses: if the user toggles filters faster than the network resolves,
-  // ignore stale results so we never overwrite a fresh list with a late one.
+  // Refetch the list when filter, sort, or the debounced search change.
+  // Guard against out-of-order responses: if the user toggles filters faster
+  // than the network resolves, ignore stale results so we never overwrite a
+  // fresh list with a late one.
   useEffect(() => {
     let ignored = false;
     start(async () => {
-      const next = await fetchItems(filter, sort);
+      const next = await fetchItems(filter, sort, searchQuery || null);
       if (!ignored) setItems(next);
     });
     return () => {
       ignored = true;
     };
-  }, [filter, sort]);
+  }, [filter, sort, searchQuery]);
 
   // Same race guard for the detail fetch.
   useEffect(() => {
@@ -112,8 +121,32 @@ export function ResearchClient({ initialItems }: { initialItems: ItemListRow[] }
         style={{ width: leftWidth }}
       >
         <div className="flex flex-col gap-3 border-b border-[color:var(--color-rule-paper)] px-4 py-3">
+          <div className="relative">
+            <input
+              type="search"
+              value={searchInput}
+              onChange={(e) => setSearchInput(e.target.value)}
+              placeholder="Search title or summary…"
+              className="w-full rounded border border-[color:var(--color-rule-paper)] bg-transparent px-3 py-1.5 pr-7 text-[13px] placeholder:text-[color:var(--color-warm-dim)] focus:border-[color:var(--color-ink)] focus:outline-none"
+            />
+            {searchInput && (
+              <button
+                onClick={() => setSearchInput("")}
+                className="absolute right-2 top-1/2 -translate-y-1/2 font-mono text-[14px] leading-none text-[color:var(--color-warm-dim)] hover:text-[color:var(--color-ink)]"
+                title="Clear search"
+                aria-label="Clear search"
+              >
+                ×
+              </button>
+            )}
+          </div>
           <FilterChips value={filter} onChange={setFilter} />
-          <SortMenu value={sort} onChange={setSort} />
+          <div className="flex items-center justify-between gap-2">
+            <SortMenu value={sort} onChange={setSort} />
+            <span className="font-mono text-[10px] uppercase tracking-mono text-[color:var(--color-warm-dim)]">
+              {items.length} {items.length === 1 ? "item" : "items"}
+            </span>
+          </div>
         </div>
         <div className="min-h-0 flex-1 overflow-y-auto">
           <ItemList items={items} selectedId={selectedId} onSelect={setSelectedId} />
