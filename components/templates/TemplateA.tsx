@@ -8,6 +8,7 @@ import {
   CategoryBadge,
   LogoBlock,
   computePanBounds,
+  getSafeInsets,
   headlineGradientStyle,
   useImagePan,
   useTemplateContext,
@@ -37,10 +38,16 @@ export function TemplateA() {
   const subtextPx = Math.round(sz.w * 0.026);
   const sourcePx = Math.round(sz.w * 0.018);
   const arrowSize = Math.round(sz.w * 0.062);
+  const safe = getSafeInsets(sz);
 
+  const layout = imageBox.layout ?? "grid";
   const gridGap = pad * 0.44;
-  const colWidth = (sz.w - pad * 2 - gridGap) / 2;
-  const colHeight = colWidth * 1.18 * imageBox.heightMul;
+  const fullW = sz.w - pad * 2;
+  const colWidth = layout === "grid" ? (fullW - gridGap) / 2 : fullW;
+  const colHeight =
+    layout === "grid"
+      ? colWidth * 1.18 * imageBox.heightMul
+      : fullW * 0.45 * imageBox.heightMul;
 
   const colors = useTextColors({
     headline: "#000000",
@@ -61,6 +68,8 @@ export function TemplateA() {
         position: "relative",
         overflow: "hidden",
         isolation: "isolate",
+        paddingTop: safe.top,
+        paddingBottom: safe.bottom,
       }}
     >
       <HalftoneBg width={sz.w} height={sz.h} state={halftone} />
@@ -83,11 +92,12 @@ export function TemplateA() {
       <div
         style={{
           display: "grid",
-          gridTemplateColumns: `${colWidth}px ${colWidth}px`,
+          gridTemplateColumns:
+            layout === "grid" ? `${colWidth}px ${colWidth}px` : `${colWidth}px`,
           gap: gridGap,
           padding: `${pad * 0.2}px ${pad}px`,
           marginTop: pad * 0.1,
-          justifyContent: "space-between",
+          justifyContent: layout === "grid" ? "space-between" : "center",
         }}
       >
         <Draggable id="image1" block style={{ width: colWidth }}>

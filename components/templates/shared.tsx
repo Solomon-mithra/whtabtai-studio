@@ -23,6 +23,22 @@ export function useTemplateContext() {
   return { ...s, sz, acc, fs };
 }
 
+/**
+ * Instagram Stories overlay UI on top of the canvas — a profile bubble + handle
+ * + progress bar at the top, and a reply input + reaction icons at the bottom.
+ * Meta's recommended safe zone is ~250px / 1920px on each end. We return zero
+ * for every other size so feed posts keep their tight editorial padding.
+ */
+export function getSafeInsets(sz: { key: string; h: number }): {
+  top: number;
+  bottom: number;
+} {
+  if (sz.key !== "ig-story") return { top: 0, bottom: 0 };
+  const ratio = 250 / 1920;
+  const inset = Math.round(sz.h * ratio);
+  return { top: inset, bottom: inset };
+}
+
 export function useTextColors(defaults: ResolvedColors): ResolvedColors {
   const s = useStudio();
   return resolveTextColors(s.textColor, s.accent, defaults);

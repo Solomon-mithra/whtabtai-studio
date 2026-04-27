@@ -60,7 +60,7 @@ export const DEFAULT_SLIDE: Omit<SlideState, "id"> = {
   textColor: { mode: "default", custom: "#FF4A1C" },
   shadow: { color: "black", blur: 0, spread: 0, opacity: 75 },
   lineHeights: { headline: 1.0, subtext: 1.32 },
-  imageBox: { heightMul: 1.0 },
+  imageBox: { heightMul: 1.0, layout: "grid" },
   halftone: DEFAULT_HALFTONE,
 };
 

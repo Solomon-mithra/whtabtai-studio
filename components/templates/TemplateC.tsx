@@ -5,6 +5,7 @@ import { shadowCSS } from "@/lib/shadow";
 import {
   CategoryBadge,
   LogoBlock,
+  getSafeInsets,
   headlineGradientStyle,
   useTemplateContext,
   useTextColors,
@@ -18,6 +19,7 @@ export function TemplateC() {
   const pad = Math.round(sz.w * 0.052);
   const quotePx = Math.round(sz.w * 0.115);
   const subtextPx = Math.round(sz.w * 0.025);
+  const safe = getSafeInsets(sz);
 
   const colors = useTextColors({
     headline: "#000000",
@@ -38,6 +40,8 @@ export function TemplateC() {
         position: "relative",
         overflow: "hidden",
         isolation: "isolate",
+        paddingTop: safe.top,
+        paddingBottom: safe.bottom,
       }}
     >
       <HalftoneBg width={sz.w} height={sz.h} state={halftone} />

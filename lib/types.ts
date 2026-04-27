@@ -30,8 +30,12 @@ export type LineHeights = {
   subtext: number;
 };
 
+export type ImageLayout = "grid" | "stack";
+
 export type ImageBoxState = {
   heightMul: number; // 0.6 - 1.4, default 1.0
+  /** Template A only: side-by-side ("grid") or one-above-the-other ("stack"). */
+  layout?: ImageLayout;
 };
 
 /**

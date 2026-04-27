@@ -280,13 +280,51 @@ export function Sidebar() {
                   />
                 )}
               </div>
+              {s.template === "A" && needsImage1 && needsImage2 ? (
+                <Field
+                  label="Image layout"
+                  hint="Side by side or stacked vertically."
+                >
+                  <div className="grid grid-cols-2 gap-2">
+                    {(
+                      [
+                        { key: "grid", label: "Side by side" },
+                        { key: "stack", label: "Stacked" },
+                      ] as const
+                    ).map((opt) => {
+                      const active = (s.imageBox.layout ?? "grid") === opt.key;
+                      return (
+                        <button
+                          key={opt.key}
+                          type="button"
+                          onClick={() =>
+                            s.setField("imageBox", {
+                              ...s.imageBox,
+                              layout: opt.key,
+                            })
+                          }
+                          className={`flex items-center justify-center border px-2.5 py-2 font-mono text-[10px] uppercase tracking-mono transition ${
+                            active
+                              ? "border-[color:var(--color-signal)] bg-[color:var(--color-signal-soft)] text-[color:var(--color-signal)]"
+                              : "border-[color:var(--color-rule-soft)] text-[color:var(--color-warm-dim)] hover:border-[color:var(--color-warm-dim)] hover:text-[color:var(--color-warm)]"
+                          }`}
+                        >
+                          {opt.label}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </Field>
+              ) : null}
               <Field
                 label="Image height"
                 hint="Resize the image canvas. Drag inside it to pan."
               >
                 <Slider
                   value={s.imageBox.heightMul}
-                  onChange={(v) => s.setField("imageBox", { heightMul: v })}
+                  onChange={(v) =>
+                    s.setField("imageBox", { ...s.imageBox, heightMul: v })
+                  }
                   min={0.4}
                   max={2.5}
                   step={0.05}
@@ -297,7 +335,9 @@ export function Sidebar() {
                     <button
                       key={v}
                       type="button"
-                      onClick={() => s.setField("imageBox", { heightMul: v })}
+                      onClick={() =>
+                        s.setField("imageBox", { ...s.imageBox, heightMul: v })
+                      }
                       className={`px-2 py-0.5 font-mono text-[10px] uppercase tracking-mono transition ${
                         Math.abs(s.imageBox.heightMul - v) < 0.025
                           ? "text-[color:var(--color-signal)]"

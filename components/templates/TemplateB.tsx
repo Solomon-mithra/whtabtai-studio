@@ -8,6 +8,7 @@ import {
   CategoryBadge,
   LogoBlock,
   computePanBounds,
+  getSafeInsets,
   headlineGradientStyle,
   useImagePan,
   useTemplateContext,
@@ -35,6 +36,7 @@ export function TemplateB() {
   const subtextPx = Math.round(sz.w * 0.026);
   const sourcePx = Math.round(sz.w * 0.018);
   const arrowSize = Math.round(sz.w * 0.062);
+  const safe = getSafeInsets(sz);
 
   const imgWidth = sz.w - pad * 2;
   const imgHeight = imgWidth * 0.75 * imageBox.heightMul;
@@ -82,6 +84,8 @@ export function TemplateB() {
         position: "relative",
         overflow: "hidden",
         isolation: "isolate",
+        paddingTop: safe.top,
+        paddingBottom: safe.bottom,
       }}
     >
       <HalftoneBg width={sz.w} height={sz.h} state={halftone} />

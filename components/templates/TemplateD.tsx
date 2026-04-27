@@ -5,6 +5,7 @@ import { shadowCSS } from "@/lib/shadow";
 import {
   CategoryBadge,
   LogoBlock,
+  getSafeInsets,
   headlineGradientStyle,
   useTemplateContext,
   useTextColors,
@@ -19,6 +20,7 @@ export function TemplateD() {
   const titlePx = Math.round(sz.w * 0.13);
   const subtextPx = Math.round(sz.w * 0.024);
   const badgePx = Math.round(sz.w * 0.02);
+  const safe = getSafeInsets(sz);
 
   // Template D has a dark background — defaults are light text.
   const colors = useTextColors({
@@ -40,6 +42,8 @@ export function TemplateD() {
         position: "relative",
         overflow: "hidden",
         isolation: "isolate",
+        paddingTop: safe.top,
+        paddingBottom: safe.bottom,
       }}
     >
       <HalftoneBg
