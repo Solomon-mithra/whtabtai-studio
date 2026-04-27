@@ -19,8 +19,17 @@ export function ItemDetailView({
   const [notes, setNotes] = useState(item.notes);
   const debounce = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  // Re-sync the textarea when the user picks a different item, and cancel any
+  // pending debounced save so it can't fire after the item changed (which
+  // would silently drop the prior item's most-recent edit).
   useEffect(() => {
     setNotes(item.notes);
+    return () => {
+      if (debounce.current) {
+        clearTimeout(debounce.current);
+        debounce.current = null;
+      }
+    };
   }, [item.id, item.notes]);
 
   function handleNotesChange(v: string) {

@@ -23,19 +23,33 @@ export function ResearchClient({ initialItems }: { initialItems: ItemListRow[] }
   const [, start] = useTransition();
   const router = useRouter();
 
+  // Refetch the list when filter/sort change. Guard against out-of-order
+  // responses: if the user toggles filters faster than the network resolves,
+  // ignore stale results so we never overwrite a fresh list with a late one.
   useEffect(() => {
+    let ignored = false;
     start(async () => {
       const next = await fetchItems(filter, sort);
-      setItems(next);
+      if (!ignored) setItems(next);
     });
+    return () => {
+      ignored = true;
+    };
   }, [filter, sort]);
 
+  // Same race guard for the detail fetch.
   useEffect(() => {
     if (!selectedId) {
       setDetail(null);
       return;
     }
-    void fetchItemDetail(selectedId).then(setDetail);
+    let ignored = false;
+    void fetchItemDetail(selectedId).then((d) => {
+      if (!ignored) setDetail(d);
+    });
+    return () => {
+      ignored = true;
+    };
   }, [selectedId]);
 
   async function handleStatus(s: ItemStatus) {
