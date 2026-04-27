@@ -1,0 +1,18 @@
+[
+  {
+    "id": 100001,
+    "tag_name": "v0.42.0",
+    "name": "v0.42.0 — bug fixes",
+    "html_url": "https://github.com/example/lib/releases/tag/v0.42.0",
+    "body": "## Fixed\n- A thing\n\n<p>Some HTML</p>",
+    "published_at": "2026-04-15T10:00:00Z"
+  },
+  {
+    "id": 100002,
+    "tag_name": "v0.43.0",
+    "name": null,
+    "html_url": "https://github.com/example/lib/releases/tag/v0.43.0",
+    "body": null,
+    "published_at": null
+  }
+]
