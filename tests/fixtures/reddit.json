@@ -1,0 +1,31 @@
+{
+  "kind": "Listing",
+  "data": {
+    "after": null,
+    "children": [
+      {
+        "kind": "t3",
+        "data": {
+          "id": "1abcd23",
+          "title": "Local Llama 3.3 70B running on 2x 3090s — benchmarks",
+          "url": "https://i.redd.it/example.png",
+          "permalink": "/r/LocalLLaMA/comments/1abcd23/local_llama_33_70b_running_on_2x_3090s_benchmarks/",
+          "selftext": "",
+          "created_utc": 1745870400
+        }
+      },
+      {
+        "kind": "t3",
+        "data": {
+          "id": "1abcd24",
+          "title": "How are you handling tool-calling latency?",
+          "url": "https://www.reddit.com/r/LocalLLaMA/comments/1abcd24/how_are_you_handling_toolcalling_latency/",
+          "permalink": "/r/LocalLLaMA/comments/1abcd24/how_are_you_handling_toolcalling_latency/",
+          "selftext": "I've been using <a href=\"#\">function-calling</a> with my local agent loop and the round-trip is killing me.",
+          "created_utc": 1745880000
+        }
+      }
+    ],
+    "before": null
+  }
+}
