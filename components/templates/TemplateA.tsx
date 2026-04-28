@@ -1,21 +1,20 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import { Draggable } from "@/components/Draggable";
 import { shadowCSS } from "@/lib/shadow";
 import {
   ArrowGlyph,
   CategoryBadge,
   LogoBlock,
-  computePanBounds,
+  MediaCover,
   getSafeInsets,
   headlineGradientStyle,
-  useImagePan,
   useTemplateContext,
   useTextColors,
 } from "./shared";
 import { HalftoneBg } from "./HalftoneBg";
 import type { ImagePanId } from "@/lib/types";
+import type { Asset } from "@/lib/media";
 
 export function TemplateA() {
   const {
@@ -58,6 +57,7 @@ export function TemplateA() {
 
   return (
     <div
+      data-template-root="A"
       style={{
         width: sz.w,
         height: sz.h,
@@ -102,7 +102,7 @@ export function TemplateA() {
       >
         <Draggable id="image1" block style={{ width: colWidth }}>
           <ImageCard
-            src={image1}
+            asset={image1}
             index={1}
             panId="image1"
             boxW={colWidth}
@@ -111,7 +111,7 @@ export function TemplateA() {
         </Draggable>
         <Draggable id="image2" block style={{ width: colWidth }}>
           <ImageCard
-            src={image2}
+            asset={image2}
             index={2}
             panId="image2"
             boxW={colWidth}
@@ -215,46 +215,21 @@ export function TemplateA() {
 }
 
 function ImageCard({
-  src,
+  asset,
   index,
   panId,
   boxW,
   boxH,
 }: {
-  src: string | null;
+  asset: Asset | null;
   index: number;
   panId: ImagePanId;
   boxW: number;
   boxH: number;
 }) {
-  const [natural, setNatural] = useState<{ w: number; h: number } | null>(null);
-
-  useEffect(() => {
-    if (!src) return;
-    let cancelled = false;
-    const img = new window.Image();
-    img.onload = () => {
-      if (!cancelled) {
-        setNatural({ w: img.naturalWidth, h: img.naturalHeight });
-      }
-    };
-    img.src = src;
-    return () => {
-      cancelled = true;
-    };
-  }, [src]);
-
-  const bounds = src && natural
-    ? computePanBounds(boxW, boxH, natural.w, natural.h)
-    : null;
-
-  const { pan, onPointerDown, onPointerMove, onPointerUp } = useImagePan(
-    panId,
-    bounds,
-  );
-
   return (
     <div
+      data-media-card={panId}
       style={{
         width: boxW,
         height: boxH,
@@ -265,24 +240,8 @@ function ImageCard({
         position: "relative",
       }}
     >
-      {src ? (
-        <div
-          data-no-drag
-          onPointerDown={onPointerDown}
-          onPointerMove={onPointerMove}
-          onPointerUp={onPointerUp}
-          onPointerCancel={onPointerUp}
-          style={{
-            position: "absolute",
-            inset: 0,
-            backgroundImage: `url("${src}")`,
-            backgroundSize: "cover",
-            backgroundRepeat: "no-repeat",
-            backgroundPosition: `calc(50% + ${pan.x}px) calc(50% + ${pan.y}px)`,
-            cursor: "grab",
-            touchAction: "none",
-          }}
-        />
+      {asset ? (
+        <MediaCover asset={asset} panId={panId} boxW={boxW} boxH={boxH} />
       ) : (
         <div
           style={{
@@ -305,10 +264,10 @@ function ImageCard({
               fontWeight: 600,
             }}
           >
-            IMAGE {String(index).padStart(2, "0")}
+            MEDIA {String(index).padStart(2, "0")}
           </span>
           <span style={{ fontSize: 11, letterSpacing: 1.2, color: "#bbb" }}>
-            DROP A SCREENSHOT
+            DROP IMAGE OR VIDEO
           </span>
         </div>
       )}

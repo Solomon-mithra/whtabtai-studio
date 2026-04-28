@@ -19,10 +19,34 @@ const anton = Anton({
   display: "swap",
 });
 
+const LOGO_PATH = "/whtabtai-logo.png";
+
 export const metadata: Metadata = {
   title: "What About AI · Studio",
   description:
     "The internal post studio for @whtabtai. AI news without the noise.",
+  icons: {
+    icon: [{ url: LOGO_PATH, type: "image/png", sizes: "1254x1254" }],
+    shortcut: [LOGO_PATH],
+    apple: [{ url: LOGO_PATH, sizes: "1254x1254" }],
+  },
+  openGraph: {
+    title: "What About AI · Studio",
+    description:
+      "The internal post studio for @whtabtai. AI news without the noise.",
+    siteName: "What About AI",
+    images: [
+      { url: LOGO_PATH, width: 1254, height: 1254, alt: "What About AI" },
+    ],
+    type: "website",
+  },
+  twitter: {
+    card: "summary",
+    title: "What About AI · Studio",
+    description:
+      "The internal post studio for @whtabtai. AI news without the noise.",
+    images: [LOGO_PATH],
+  },
 };
 
 const editorialSidebarTheme = {
@@ -47,7 +71,10 @@ export default function RootLayout({
       lang="en"
       className={`${inter.variable} ${anton.variable} h-full antialiased`}
     >
-      <body className="h-screen overflow-hidden bg-[color:var(--color-paper)] text-[color:var(--color-ink)]">
+      <body
+        suppressHydrationWarning
+        className="h-screen overflow-hidden bg-[color:var(--color-paper)] text-[color:var(--color-ink)]"
+      >
         <TooltipProvider delay={0}>
           <SidebarProvider defaultOpen={false} style={editorialSidebarTheme}>
             <SideNav />

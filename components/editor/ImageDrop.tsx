@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, useState, type DragEvent } from "react";
-import { fileToDataUrl } from "@/lib/export";
+import { fileToAsset, releaseAsset, type Asset } from "@/lib/media";
 
 export function ImageDrop({
   value,
@@ -9,25 +9,40 @@ export function ImageDrop({
   label,
   aspect = "4 / 5",
 }: {
-  value: string | null;
-  onChange: (value: string | null) => void;
+  value: Asset | null;
+  onChange: (value: Asset | null) => void;
   label: string;
   aspect?: string;
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [over, setOver] = useState(false);
+  const [busy, setBusy] = useState(false);
 
   async function handleFiles(files: FileList | null) {
     const f = files?.[0];
     if (!f) return;
-    const url = await fileToDataUrl(f);
-    onChange(url);
+    setBusy(true);
+    try {
+      const next = await fileToAsset(f);
+      releaseAsset(value);
+      onChange(next);
+    } catch (err) {
+      console.error("Failed to load asset:", err);
+    } finally {
+      setBusy(false);
+    }
   }
 
   function onDrop(e: DragEvent<HTMLDivElement>) {
     e.preventDefault();
     setOver(false);
     handleFiles(e.dataTransfer.files);
+  }
+
+  function onClear(e: React.MouseEvent) {
+    e.stopPropagation();
+    releaseAsset(value);
+    onChange(null);
   }
 
   return (
@@ -48,18 +63,31 @@ export function ImageDrop({
     >
       {value ? (
         <>
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src={value}
-            alt={label}
-            className="h-full w-full object-cover"
-          />
+          {value.kind === "video" ? (
+            <video
+              src={value.url}
+              autoPlay
+              muted
+              loop
+              playsInline
+              className="h-full w-full object-cover"
+            />
+          ) : (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={value.url}
+              alt={label}
+              className="h-full w-full object-cover"
+            />
+          )}
+          {value.kind === "video" ? (
+            <span className="absolute left-2 top-2 z-10 bg-[color:var(--color-ink)] px-2 py-1 font-mono text-[9px] uppercase tracking-mono text-[color:var(--color-warm)]">
+              Video
+            </span>
+          ) : null}
           <button
             type="button"
-            onClick={(e) => {
-              e.stopPropagation();
-              onChange(null);
-            }}
+            onClick={onClear}
             className="absolute right-2 top-2 z-10 bg-[color:var(--color-ink)] px-2 py-1 font-mono text-[9px] uppercase tracking-mono text-[color:var(--color-warm)] opacity-0 transition group-hover:opacity-100"
           >
             Replace
@@ -68,20 +96,20 @@ export function ImageDrop({
       ) : (
         <div className="flex h-full w-full flex-col items-center justify-center gap-1 p-4 text-center">
           <span className="font-mono text-[10px] uppercase tracking-mono text-[color:var(--color-warm-dim)]">
-            {over ? "Drop now" : "Drop or click"}
+            {busy ? "Loading…" : over ? "Drop now" : "Drop or click"}
           </span>
           <span className="font-display text-[18px] uppercase text-[color:var(--color-warm)]">
             {label}
           </span>
           <span className="mt-1 font-mono text-[9px] uppercase tracking-mono text-[color:var(--color-warm-dim)] opacity-60">
-            png · jpg · webp
+            png · jpg · webp · mp4 · mov · webm
           </span>
         </div>
       )}
       <input
         ref={inputRef}
         type="file"
-        accept="image/*"
+        accept="image/*,video/*"
         className="hidden"
         onChange={(e) => handleFiles(e.target.files)}
       />

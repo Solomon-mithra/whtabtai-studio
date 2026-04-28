@@ -254,10 +254,10 @@ export function Sidebar() {
           title="Assets"
           hint={
             !needsImage1 && !needsImage2
-              ? "no images for this template"
+              ? "no media for this template"
               : needsImage2
-                ? "two images"
-                : "one image"
+                ? "two slots · image or video"
+                : "one slot · image or video"
           }
         >
           {needsImage1 || needsImage2 ? (
@@ -265,7 +265,7 @@ export function Sidebar() {
               <div className="grid grid-cols-2 gap-3">
                 {needsImage1 && (
                   <ImageDrop
-                    label="Image 01"
+                    label="Media 01"
                     aspect="4 / 5"
                     value={s.image1}
                     onChange={(v) => s.setField("image1", v)}
@@ -273,7 +273,7 @@ export function Sidebar() {
                 )}
                 {needsImage2 && (
                   <ImageDrop
-                    label="Image 02"
+                    label="Media 02"
                     aspect="4 / 5"
                     value={s.image2}
                     onChange={(v) => s.setField("image2", v)}
@@ -353,7 +353,7 @@ export function Sidebar() {
           ) : (
             <div className="border border-[color:var(--color-rule-soft)] px-4 py-6 text-center">
               <div className="font-mono text-[10px] uppercase tracking-mono text-[color:var(--color-warm-dim)]">
-                No images required
+                No media required
               </div>
               <div className="mt-1 font-display text-[18px] uppercase text-[color:var(--color-warm)]">
                 {tpl.label} is text-led

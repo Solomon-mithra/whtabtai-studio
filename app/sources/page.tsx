@@ -22,7 +22,7 @@ export default async function SourcesPage() {
               <th className="px-4 py-2">Enabled</th>
               <th className="px-4 py-2">Last fetched</th>
               <th className="px-4 py-2">Items</th>
-              <th className="px-4 py-2"></th> {/* delete column */}
+              <th className="px-4 py-2"></th>
             </tr>
           </thead>
           <tbody>
