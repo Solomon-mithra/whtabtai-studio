@@ -19,11 +19,14 @@ import type {
   StudioState,
 } from "./types";
 import { DEFAULT_HALFTONE } from "./halftone";
+import type { Asset } from "./media";
+import { isVideoAsset } from "./media";
 import type { SizeKey } from "./sizes";
 import type { FontSystemKey } from "./typography";
 
-const STORAGE_KEY = "whtabtai-studio:v6";
-const LEGACY_STORAGE_KEY = "whtabtai-studio:v5";
+const STORAGE_KEY = "whtabtai-studio:v7";
+const LEGACY_STORAGE_KEY_V6 = "whtabtai-studio:v6";
+const LEGACY_STORAGE_KEY_V5 = "whtabtai-studio:v5";
 const MAX_HISTORY = 50;
 const TEXT_SQUASH_MS = 700;
 
@@ -60,7 +63,7 @@ export const DEFAULT_SLIDE: Omit<SlideState, "id"> = {
   textColor: { mode: "default", custom: "#FF4A1C" },
   shadow: { color: "black", blur: 0, spread: 0, opacity: 75 },
   lineHeights: { headline: 1.0, subtext: 1.32 },
-  imageBox: { heightMul: 1.0 },
+  imageBox: { heightMul: 1.0, layout: "grid" },
   halftone: DEFAULT_HALFTONE,
 };
 
@@ -81,9 +84,34 @@ export const DEFAULT_DOCUMENT: DocumentState = {
   activeId: FIRST_SLIDE_ID,
 };
 
-/** Migrate the v5 single-state shape into a one-slide v6 document. */
+/**
+ * Legacy v5/v6 stored image fields as raw data-URL strings. Coerce to the new
+ * Asset shape so templates and the export pipeline see a single type. Natural
+ * dimensions get filled in lazily by template effects when the asset renders.
+ */
+function coerceLegacyImage(value: unknown): Asset | null {
+  if (!value) return null;
+  if (typeof value === "string") {
+    return {
+      kind: "image",
+      url: value,
+      mime: "image/png",
+      naturalW: 0,
+      naturalH: 0,
+    };
+  }
+  if (typeof value === "object" && value !== null && "kind" in value) {
+    return value as Asset;
+  }
+  return null;
+}
+
+/** Migrate the v5 single-state shape into a one-slide v7 document. */
 function migrateV5(parsed: Record<string, unknown>): DocumentState {
-  const p = parsed as Partial<StudioState>;
+  const p = parsed as Partial<StudioState> & {
+    image1?: unknown;
+    image2?: unknown;
+  };
   const slide: SlideState = {
     id: FIRST_SLIDE_ID,
     template: p.template ?? DEFAULT_SLIDE.template,
@@ -93,8 +121,8 @@ function migrateV5(parsed: Record<string, unknown>): DocumentState {
     subtext: p.subtext ?? DEFAULT_SLIDE.subtext,
     source: p.source ?? DEFAULT_SLIDE.source,
     cta: p.cta ?? DEFAULT_SLIDE.cta,
-    image1: p.image1 ?? null,
-    image2: p.image2 ?? null,
+    image1: coerceLegacyImage(p.image1),
+    image2: coerceLegacyImage(p.image2),
     offsets: p.offsets ?? {},
     imagePan: p.imagePan ?? {},
     textColor: p.textColor ?? DEFAULT_SLIDE.textColor,
@@ -112,13 +140,18 @@ function migrateV5(parsed: Record<string, unknown>): DocumentState {
 }
 
 function reviveDocument(parsed: Partial<DocumentState>): DocumentState {
-  const slides = (parsed.slides ?? []).map((s, i) => ({
-    ...DEFAULT_SLIDE,
-    ...s,
-    id: s.id ?? (i === 0 ? FIRST_SLIDE_ID : newSlideId()),
-    offsets: s.offsets ?? {},
-    imagePan: s.imagePan ?? {},
-  }));
+  const slides = (parsed.slides ?? []).map((raw, i) => {
+    const s = raw as SlideState & { image1?: unknown; image2?: unknown };
+    return {
+      ...DEFAULT_SLIDE,
+      ...s,
+      id: s.id ?? (i === 0 ? FIRST_SLIDE_ID : newSlideId()),
+      image1: coerceLegacyImage(s.image1),
+      image2: coerceLegacyImage(s.image2),
+      offsets: s.offsets ?? {},
+      imagePan: s.imagePan ?? {},
+    } satisfies SlideState;
+  });
   if (slides.length === 0) slides.push({ id: FIRST_SLIDE_ID, ...DEFAULT_SLIDE });
   const activeId = slides.find((s) => s.id === parsed.activeId)
     ? parsed.activeId!
@@ -128,6 +161,22 @@ function reviveDocument(parsed: Partial<DocumentState>): DocumentState {
     fontSystem: parsed.fontSystem ?? DEFAULT_DOCUMENT.fontSystem,
     slides,
     activeId,
+  };
+}
+
+/**
+ * Strip video assets before serializing — they're object URLs that don't
+ * survive a page reload, so persisting them would leave dead references.
+ * Images (data URLs) round-trip fine.
+ */
+function serializeForStorage(doc: DocumentState): DocumentState {
+  return {
+    ...doc,
+    slides: doc.slides.map((s) => ({
+      ...s,
+      image1: isVideoAsset(s.image1) ? null : s.image1,
+      image2: isVideoAsset(s.image2) ? null : s.image2,
+    })),
   };
 }
 
@@ -159,6 +208,8 @@ type StudioContextValue = StudioState & {
   duplicateSlide: (id?: string) => void;
   deleteSlide: (id: string) => void;
   reorderSlides: (fromIndex: number, toIndex: number) => void;
+
+  hydrated: boolean;
 };
 
 const StudioContext = createContext<StudioContextValue | null>(null);
@@ -201,20 +252,26 @@ export function StudioProvider({ children }: { children: ReactNode }) {
     shellRef.current = shell;
   }, [shell]);
 
-  // Hydrate from localStorage. Tries v6 first, then migrates v5 if found.
+  // Hydrate from localStorage. Tries v7 first, then v6, then migrates v5 if found.
   // The setShell calls run at most once on mount, so cascading-render concerns don't apply.
   useEffect(() => {
     try {
-      const rawV6 = localStorage.getItem(STORAGE_KEY);
-      if (rawV6) {
-        const parsed = JSON.parse(rawV6) as Partial<DocumentState>;
+      const rawV7 = localStorage.getItem(STORAGE_KEY);
+      if (rawV7) {
+        const parsed = JSON.parse(rawV7) as Partial<DocumentState>;
         // eslint-disable-next-line react-hooks/set-state-in-effect
         setShell({ current: reviveDocument(parsed), past: [], future: [] });
       } else {
-        const rawV5 = localStorage.getItem(LEGACY_STORAGE_KEY);
-        if (rawV5) {
-          const parsed = JSON.parse(rawV5) as Record<string, unknown>;
-          setShell({ current: migrateV5(parsed), past: [], future: [] });
+        const rawV6 = localStorage.getItem(LEGACY_STORAGE_KEY_V6);
+        if (rawV6) {
+          const parsed = JSON.parse(rawV6) as Partial<DocumentState>;
+          setShell({ current: reviveDocument(parsed), past: [], future: [] });
+        } else {
+          const rawV5 = localStorage.getItem(LEGACY_STORAGE_KEY_V5);
+          if (rawV5) {
+            const parsed = JSON.parse(rawV5) as Record<string, unknown>;
+            setShell({ current: migrateV5(parsed), past: [], future: [] });
+          }
         }
       }
     } catch {}
@@ -225,7 +282,10 @@ export function StudioProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (!hydrated) return;
     try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(current));
+      localStorage.setItem(
+        STORAGE_KEY,
+        JSON.stringify(serializeForStorage(current)),
+      );
     } catch {}
   }, [current, hydrated]);
 
@@ -500,6 +560,8 @@ export function StudioProvider({ children }: { children: ReactNode }) {
       duplicateSlide,
       deleteSlide,
       reorderSlides,
+
+      hydrated,
     };
   }, [
     current,
@@ -520,6 +582,7 @@ export function StudioProvider({ children }: { children: ReactNode }) {
     duplicateSlide,
     deleteSlide,
     reorderSlides,
+    hydrated,
   ]);
 
   return (
@@ -591,6 +654,8 @@ export function StudioSlideOverride({
       duplicateSlide: noop,
       deleteSlide: noop,
       reorderSlides: noop,
+
+      hydrated: true,
     };
   }, [slide, size, fontSystem]);
   return (

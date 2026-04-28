@@ -6,6 +6,7 @@ import type { FontSystemKey } from "./typography";
 import type { ShadowState } from "./shadow";
 import type { TextColorState } from "./textColor";
 import type { HalftoneState } from "./halftone";
+import type { Asset } from "./media";
 
 export type ElementId =
   | "headline"
@@ -30,8 +31,12 @@ export type LineHeights = {
   subtext: number;
 };
 
+export type ImageLayout = "grid" | "stack";
+
 export type ImageBoxState = {
   heightMul: number; // 0.6 - 1.4, default 1.0
+  /** Template A only: side-by-side ("grid") or one-above-the-other ("stack"). */
+  layout?: ImageLayout;
 };
 
 /**
@@ -47,8 +52,8 @@ export type SlideState = {
   subtext: string;
   source: string;
   cta: string;
-  image1: string | null;
-  image2: string | null;
+  image1: Asset | null;
+  image2: Asset | null;
   offsets: OffsetMap;
   imagePan: ImagePanMap;
   textColor: TextColorState;

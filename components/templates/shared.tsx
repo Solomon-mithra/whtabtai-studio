@@ -1,7 +1,9 @@
 "use client";
 
 import {
+  useEffect,
   useRef,
+  useState,
   type PointerEvent,
 } from "react";
 import { ACCENTS } from "@/lib/brand";
@@ -14,6 +16,7 @@ import {
 } from "@/lib/textColor";
 import { useCanvasScale } from "@/components/editor/CanvasRefContext";
 import type { ImagePanId } from "@/lib/types";
+import type { Asset } from "@/lib/media";
 
 export function useTemplateContext() {
   const s = useStudio();
@@ -21,6 +24,23 @@ export function useTemplateContext() {
   const acc = ACCENTS[s.accent];
   const fs = FONT_SYSTEMS[s.fontSystem];
   return { ...s, sz, acc, fs };
+}
+
+/**
+ * Instagram Stories overlay UI on top of the canvas — a profile bubble + handle
+ * + progress bar at the top, and a reply input + reaction icons at the bottom.
+ * 100px / 1920px on each end is enough to keep the logo and footer clear of
+ * Instagram's chrome without eating into the editorial layout. Other sizes
+ * stay at zero so feed posts keep their tight padding.
+ */
+export function getSafeInsets(sz: { key: string; h: number }): {
+  top: number;
+  bottom: number;
+} {
+  if (sz.key !== "ig-story") return { top: 0, bottom: 0 };
+  const ratio = 100 / 1920;
+  const inset = Math.round(sz.h * ratio);
+  return { top: inset, bottom: inset };
 }
 
 export function useTextColors(defaults: ResolvedColors): ResolvedColors {
@@ -289,4 +309,145 @@ export function useImagePan(id: ImagePanId, bounds: ImagePanBounds | null) {
   }
 
   return { pan, onPointerDown, onPointerMove, onPointerUp };
+}
+
+/**
+ * Read the natural pixel dimensions of an image or video asset.
+ *
+ * If the asset already has cached dims (set by `fileToAsset`), they're returned
+ * directly with no async work. Otherwise an Image/video element loads in the
+ * background and state updates only inside its callback — never synchronously
+ * inside the effect body, which the lint rule forbids.
+ *
+ * Loaded dims are keyed by URL so a stale value from a prior asset isn't
+ * returned for a new one mid-load.
+ */
+export function useNaturalDimensions(
+  asset: Asset | null,
+): { w: number; h: number } | null {
+  const [loaded, setLoaded] = useState<{
+    url: string;
+    w: number;
+    h: number;
+  } | null>(null);
+
+  useEffect(() => {
+    if (!asset) return;
+    if (asset.naturalW > 0 && asset.naturalH > 0) return;
+    let cancelled = false;
+    if (asset.kind === "image") {
+      const img = new window.Image();
+      img.onload = () => {
+        if (!cancelled) {
+          setLoaded({
+            url: asset.url,
+            w: img.naturalWidth,
+            h: img.naturalHeight,
+          });
+        }
+      };
+      img.src = asset.url;
+    } else {
+      const v = document.createElement("video");
+      v.preload = "metadata";
+      v.muted = true;
+      v.playsInline = true;
+      v.onloadedmetadata = () => {
+        if (!cancelled) {
+          setLoaded({ url: asset.url, w: v.videoWidth, h: v.videoHeight });
+        }
+      };
+      v.src = asset.url;
+    }
+    return () => {
+      cancelled = true;
+    };
+  }, [asset]);
+
+  if (!asset) return null;
+  if (asset.naturalW > 0 && asset.naturalH > 0) {
+    return { w: asset.naturalW, h: asset.naturalH };
+  }
+  if (loaded && loaded.url === asset.url) {
+    return { w: loaded.w, h: loaded.h };
+  }
+  return null;
+}
+
+/**
+ * Renders an image or video asset with cover-fit + draggable pan. Mirrors the
+ * background-image approach used previously: object-position takes the same
+ * pixel offset as background-position.
+ *
+ * The wrapping element is tagged with `data-media-slot` (the panId) and
+ * `data-media-kind` so the export pipeline can locate video slots.
+ */
+export function MediaCover({
+  asset,
+  panId,
+  boxW,
+  boxH,
+}: {
+  asset: Asset;
+  panId: ImagePanId;
+  boxW: number;
+  boxH: number;
+}) {
+  const natural = useNaturalDimensions(asset);
+  const bounds = natural
+    ? computePanBounds(boxW, boxH, natural.w, natural.h)
+    : null;
+  const { pan, onPointerDown, onPointerMove, onPointerUp } = useImagePan(
+    panId,
+    bounds,
+  );
+  const objectPos = `calc(50% + ${pan.x}px) calc(50% + ${pan.y}px)`;
+
+  return (
+    <div
+      data-no-drag
+      data-media-slot={panId}
+      data-media-kind={asset.kind}
+      onPointerDown={onPointerDown}
+      onPointerMove={onPointerMove}
+      onPointerUp={onPointerUp}
+      onPointerCancel={onPointerUp}
+      style={{
+        position: "absolute",
+        inset: 0,
+        cursor: "grab",
+        touchAction: "none",
+        overflow: "hidden",
+      }}
+    >
+      {asset.kind === "video" ? (
+        <video
+          src={asset.url}
+          autoPlay
+          muted
+          loop
+          playsInline
+          style={{
+            width: "100%",
+            height: "100%",
+            objectFit: "cover",
+            objectPosition: objectPos,
+            display: "block",
+            pointerEvents: "none",
+          }}
+        />
+      ) : (
+        <div
+          style={{
+            position: "absolute",
+            inset: 0,
+            backgroundImage: `url("${asset.url}")`,
+            backgroundSize: "cover",
+            backgroundRepeat: "no-repeat",
+            backgroundPosition: objectPos,
+          }}
+        />
+      )}
+    </div>
+  );
 }

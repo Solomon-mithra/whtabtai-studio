@@ -6,6 +6,11 @@ import JSZip from "jszip";
 import { StudioSlideOverride, useStudio } from "@/lib/store";
 import { SIZES } from "@/lib/sizes";
 import { exportNodeToPng, nodeToPngBlob, slugify } from "@/lib/export";
+import {
+  exportSlideAsMp4,
+  slideHasVideo,
+  type ExportProgress,
+} from "@/lib/videoExport";
 import { useCanvasRef } from "./CanvasRefContext";
 import { TemplateA } from "@/components/templates/TemplateA";
 import { TemplateB } from "@/components/templates/TemplateB";
@@ -35,6 +40,15 @@ function timestamp() {
     .slice(0, 15);
 }
 
+function downloadBlob(blob: Blob, fileName: string) {
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = fileName;
+  link.click();
+  URL.revokeObjectURL(url);
+}
+
 export function ExportBar() {
   const s = useStudio();
   const sz = SIZES[s.size];
@@ -43,17 +57,39 @@ export function ExportBar() {
   const [progress, setProgress] = useState<{ done: number; total: number } | null>(
     null,
   );
+  const [videoPhase, setVideoPhase] = useState<ExportProgress | null>(null);
   const rigRef = useRef<HTMLDivElement>(null);
 
   async function onExportActive() {
+    console.log("[export] click — active slide", s.activeIndex, "video?", activeIsVideo);
     const node = canvasRef?.current;
-    if (!node) return;
+    if (!node) {
+      console.warn("[export] no canvas node — bail");
+      return;
+    }
     setBusy("single");
     try {
-      const fileName = `whtabtai_${s.template}_${slugify(s.headline)}_${sz.w}x${sz.h}_${timestamp()}.png`;
-      await exportNodeToPng(node, sz.w, sz.h, fileName);
+      const slide = s.slides[s.activeIndex];
+      const stamp = timestamp();
+      if (slide && slideHasVideo(slide)) {
+        const blob = await exportSlideAsMp4({
+          node,
+          size: { w: sz.w, h: sz.h },
+          slide,
+          onProgress: setVideoPhase,
+          onLog: (msg) => console.log("[ffmpeg]", msg),
+        });
+        downloadBlob(
+          blob,
+          `whtabtai_${s.template}_${slugify(s.headline)}_${sz.w}x${sz.h}_${stamp}.mp4`,
+        );
+      } else {
+        const fileName = `whtabtai_${s.template}_${slugify(s.headline)}_${sz.w}x${sz.h}_${stamp}.png`;
+        await exportNodeToPng(node, sz.w, sz.h, fileName);
+      }
     } finally {
       setBusy(null);
+      setVideoPhase(null);
     }
   }
 
@@ -80,10 +116,25 @@ export function ExportBar() {
           `[data-export-slide="${slide.id}"]`,
         );
         if (!node) continue;
-        const blob = await nodeToPngBlob(node, sz.w, sz.h);
         const num = String(i + 1).padStart(2, "0");
-        const name = `${num}_${slide.template}_${slugify(slide.headline)}.png`;
-        folder.file(name, blob);
+        if (slideHasVideo(slide)) {
+          const blob = await exportSlideAsMp4({
+            node,
+            size: { w: sz.w, h: sz.h },
+            slide,
+            onProgress: setVideoPhase,
+          });
+          folder.file(
+            `${num}_${slide.template}_${slugify(slide.headline)}.mp4`,
+            blob,
+          );
+        } else {
+          const blob = await nodeToPngBlob(node, sz.w, sz.h);
+          folder.file(
+            `${num}_${slide.template}_${slugify(slide.headline)}.png`,
+            blob,
+          );
+        }
         setProgress({ done: i + 1, total: s.slides.length });
       }
 
@@ -97,11 +148,15 @@ export function ExportBar() {
     } finally {
       setBusy(null);
       setProgress(null);
+      setVideoPhase(null);
     }
   }
 
   const isSingle = busy === "single";
   const isAll = busy === "all";
+  const activeSlide = s.slides[s.activeIndex];
+  const activeIsVideo = activeSlide ? slideHasVideo(activeSlide) : false;
+  const anyVideo = s.slides.some(slideHasVideo);
 
   return (
     <div className="border-t border-[color:var(--color-rule-soft)] bg-[color:var(--color-ink-2)] px-7 py-5">
@@ -116,17 +171,40 @@ export function ExportBar() {
         type="button"
         disabled={busy !== null}
         onClick={onExportActive}
-        className="group relative flex w-full items-center justify-between border border-[color:var(--color-warm)] bg-[color:var(--color-warm)] px-5 py-4 text-[color:var(--color-ink)] transition hover:bg-[color:var(--color-signal)] hover:border-[color:var(--color-signal)] hover:text-[color:var(--color-warm)] disabled:opacity-60"
+        className="group relative flex w-full items-center justify-between overflow-hidden border border-[color:var(--color-warm)] bg-[color:var(--color-warm)] px-5 py-4 text-[color:var(--color-ink)] transition hover:bg-[color:var(--color-signal)] hover:border-[color:var(--color-signal)] hover:text-[color:var(--color-warm)] disabled:opacity-60"
       >
-        <div className="flex flex-col items-start">
+        {videoPhase && busy !== null ? (
+          <span
+            aria-hidden
+            className="absolute inset-y-0 left-0 bg-[color:var(--color-signal)]/30 transition-[width] duration-150 ease-out"
+            style={{
+              width:
+                videoPhase.ratio !== undefined
+                  ? `${Math.round(videoPhase.ratio * 100)}%`
+                  : "100%",
+              opacity: videoPhase.ratio !== undefined ? 1 : 0.5,
+            }}
+          />
+        ) : null}
+        <div className="relative flex flex-col items-start">
           <span className="font-mono text-[10px] uppercase tracking-mono opacity-70">
             Export · slide {s.activeIndex + 1}
           </span>
           <span className="font-display text-[22px] uppercase leading-none">
-            {isSingle ? "Rendering…" : "Save as PNG"}
+            {busy && videoPhase
+              ? videoPhase.ratio !== undefined
+                ? `${videoPhase.label} ${Math.round(videoPhase.ratio * 100)}%`
+                : `${videoPhase.label}…`
+              : isSingle
+                ? activeIsVideo
+                  ? "Rendering MP4…"
+                  : "Rendering…"
+                : activeIsVideo
+                  ? "Save as MP4"
+                  : "Save as PNG"}
           </span>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="relative flex items-center gap-3">
           <span className="font-mono text-[10px] uppercase tracking-mono opacity-70">
             {sz.w}×{sz.h}
           </span>
@@ -170,6 +248,9 @@ export function ExportBar() {
 
       <p className="mt-3 font-mono text-[10px] leading-relaxed tracking-[0.04em] text-[color:var(--color-warm-dim)]">
         Renders at full resolution. Saved locally — never uploaded.
+        {anyVideo
+          ? " Video slides take longer; the encoder loads on first run."
+          : ""}
       </p>
 
       {/* Off-screen rig: every slide rendered at full size for export-all.

@@ -214,6 +214,21 @@ body {
   display: none !important;
 }
 
+/* Video export overlay mode: render the slide with everything in place except
+   solid backgrounds get cleared, leaving a transparent canvas everywhere a
+   video sits. ffmpeg composites the video underneath at the same coordinates,
+   then layers this overlay on top — text, halftone, badges all preserved. */
+.exporting-overlay [data-template-root],
+.exporting-overlay [data-slide-stage],
+.exporting-overlay [data-export-slide],
+.exporting-overlay [data-media-card] {
+  background: transparent !important;
+  background-color: transparent !important;
+}
+.exporting-overlay [data-media-kind="video"] {
+  visibility: hidden !important;
+}
+
 @theme inline {
   --font-heading: var(--font-sans);
   --font-sans: var(--font-sans);

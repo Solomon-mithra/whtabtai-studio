@@ -1,15 +1,14 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import { Draggable } from "@/components/Draggable";
 import { shadowCSS } from "@/lib/shadow";
 import {
   ArrowGlyph,
   CategoryBadge,
   LogoBlock,
-  computePanBounds,
+  MediaCover,
+  getSafeInsets,
   headlineGradientStyle,
-  useImagePan,
   useTemplateContext,
   useTextColors,
 } from "./shared";
@@ -35,6 +34,7 @@ export function TemplateB() {
   const subtextPx = Math.round(sz.w * 0.026);
   const sourcePx = Math.round(sz.w * 0.018);
   const arrowSize = Math.round(sz.w * 0.062);
+  const safe = getSafeInsets(sz);
 
   const imgWidth = sz.w - pad * 2;
   const imgHeight = imgWidth * 0.75 * imageBox.heightMul;
@@ -46,32 +46,9 @@ export function TemplateB() {
     stripe: "#000000",
   });
 
-  const [natural, setNatural] = useState<{ w: number; h: number } | null>(null);
-  useEffect(() => {
-    if (!image1) return;
-    let cancelled = false;
-    const img = new window.Image();
-    img.onload = () => {
-      if (!cancelled) {
-        setNatural({ w: img.naturalWidth, h: img.naturalHeight });
-      }
-    };
-    img.src = image1;
-    return () => {
-      cancelled = true;
-    };
-  }, [image1]);
-
-  const bounds = image1 && natural
-    ? computePanBounds(imgWidth, imgHeight, natural.w, natural.h)
-    : null;
-  const { pan, onPointerDown, onPointerMove, onPointerUp } = useImagePan(
-    "image1",
-    bounds,
-  );
-
   return (
     <div
+      data-template-root="B"
       style={{
         width: sz.w,
         height: sz.h,
@@ -82,6 +59,8 @@ export function TemplateB() {
         position: "relative",
         overflow: "hidden",
         isolation: "isolate",
+        paddingTop: safe.top,
+        paddingBottom: safe.bottom,
       }}
     >
       <HalftoneBg width={sz.w} height={sz.h} state={halftone} />
@@ -104,6 +83,7 @@ export function TemplateB() {
       <div style={{ padding: `${pad * 0.2}px ${pad}px` }}>
         <Draggable id="image1" block style={{ width: imgWidth }}>
           <div
+            data-media-card="image1"
             style={{
               width: imgWidth,
               height: imgHeight,
@@ -115,22 +95,11 @@ export function TemplateB() {
             }}
           >
             {image1 ? (
-              <div
-                data-no-drag
-                onPointerDown={onPointerDown}
-                onPointerMove={onPointerMove}
-                onPointerUp={onPointerUp}
-                onPointerCancel={onPointerUp}
-                style={{
-                  position: "absolute",
-                  inset: 0,
-                  backgroundImage: `url("${image1}")`,
-                  backgroundSize: "cover",
-                  backgroundRepeat: "no-repeat",
-                  backgroundPosition: `calc(50% + ${pan.x}px) calc(50% + ${pan.y}px)`,
-                  cursor: "grab",
-                  touchAction: "none",
-                }}
+              <MediaCover
+                asset={image1}
+                panId="image1"
+                boxW={imgWidth}
+                boxH={imgHeight}
               />
             ) : (
               <div
@@ -148,7 +117,7 @@ export function TemplateB() {
                   fontWeight: 600,
                 }}
               >
-                DROP A SCREENSHOT
+                DROP IMAGE OR VIDEO
               </div>
             )}
           </div>
