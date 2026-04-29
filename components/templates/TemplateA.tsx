@@ -142,6 +142,7 @@ export function TemplateA() {
               overflowWrap: "anywhere",
               wordBreak: "break-word",
               hyphens: "auto",
+              whiteSpace: "pre-wrap",
               textShadow: shadowCSS(shadow, accent, headlinePx),
               ...headlineGradientStyle(colors.headline),
             }}
@@ -183,6 +184,7 @@ export function TemplateA() {
                 margin: 0,
                 overflowWrap: "anywhere",
                 wordBreak: "break-word",
+                whiteSpace: "pre-wrap",
                 textShadow: shadowCSS(shadow, accent, subtextPx),
               }}
             >

@@ -2,6 +2,8 @@
 
 The open-source workshop behind [@whtabtai](https://instagram.com/whtabtai), an AI news brand for builders.
 
+![Studio x](preview.png)
+
 This is the same tool I use to find stories, decide what's worth covering, and lay out every post that goes out. It's open so you can see exactly how the news gets made — what feeds it watches, how it ranks signal vs. noise, and what gets cut.
 
 > **Status:** pre-1.0. Public-facing repo will land once the pipeline stabilizes and secrets are properly factored out. The code in `main` is the live tool — expect rough edges.
