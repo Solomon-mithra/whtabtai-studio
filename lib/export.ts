@@ -2,6 +2,19 @@
 
 import { toPng } from "html-to-image";
 
+/**
+ * WebKit rasterizes html-to-image's foreignObject SVG before the images
+ * embedded in it finish decoding, so image slots come out blank on the first
+ * render. Extra warm-up passes leave the decoded images in cache for the pass
+ * we keep. Chromium doesn't have the race — skip the cost there.
+ */
+function renderPassCount(): number {
+  const isWebKit =
+    typeof navigator !== "undefined" &&
+    /^((?!chrome|chromium|crios|android).)*safari/i.test(navigator.userAgent);
+  return isWebKit ? 3 : 1;
+}
+
 async function renderNodeToPngDataUrl(
   node: HTMLElement,
   width: number,
@@ -12,7 +25,7 @@ async function renderNodeToPngDataUrl(
   node.classList.add("exporting");
   if (extraClass) node.classList.add(extraClass);
   try {
-    return await toPng(node, {
+    const toPngOptions = {
       width,
       height,
       pixelRatio: 1,
@@ -24,7 +37,12 @@ async function renderNodeToPngDataUrl(
         width: `${width}px`,
         height: `${height}px`,
       },
-    });
+    };
+    let dataUrl = "";
+    for (let pass = renderPassCount(); pass > 0; pass--) {
+      dataUrl = await toPng(node, toPngOptions);
+    }
+    return dataUrl;
   } finally {
     node.classList.remove("exporting");
     if (extraClass) node.classList.remove(extraClass);
